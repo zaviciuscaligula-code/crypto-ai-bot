@@ -96,33 +96,33 @@ a_pb7 = 1 - norm.cdf(df['BTC_Z'].iloc[-1], loc=fb7.predicted_mean.iloc[-1], scal
 a_pe1 = 1 - norm.cdf(df['ETHBTC_Z'].iloc[-1], loc=fe1.predicted_mean.iloc[0], scale=fe1.se_mean.iloc[0])
 a_pe7 = 1 - norm.cdf(df['ETHBTC_Z'].iloc[-1], loc=fe7.predicted_mean.iloc[-1], scale=fe7.se_mean.iloc[-1])
 
-# Σύνθεση Μηνύματος
+# Σύνθεση Μηνύματος (Απλό κείμενο χωρίς Markdown για να μην κολλάει)
 def get_p(prob):
-    return f"ΑΥΞΗΣΗ 📈 ({prob*100:.1f}%)" if prob >= 0.50 else f"ΠΤΩΣΗ 📉 ({(1-prob)*100:.1f}%)"
+    return f"ΑΥΞΗΣΗ ({prob*100:.1f}%)" if prob >= 0.50 else f"ΠΤΩΣΗ ({(1-prob)*100:.1f}%)"
 
 message = (
-    "📊 *ΠΡΩΙΝΟ AI DASHBOARD REPORT*\n"
-    f"💰 *BTC:* ${df['BTC_Close'].iloc[-1]:,.2f}\n"
-    f"Ξ *ETH-BTC:* {df['ETHBTC_Close'].iloc[-1]:.5f}\n"
-    f"🔗 *Coint Z:* {coint_z:.2f}\n"
-    "━━━━━━━━━━━━━━━━━━━\n\n"
-    "🔮 *ΠΡΟΒΛΕΨΕΙΣ BITCOIN (BTC)*\n"
-    "-------------------\n"
+    "📊 ΠΡΩΙΝΟ AI DASHBOARD REPORT\n"
+    f"💰 BTC: ${df['BTC_Close'].iloc[-1]:,.2f}\n"
+    f"Ξ ETH-BTC: {df['ETHBTC_Close'].iloc[-1]:.5f}\n"
+    f"🔗 Coint Z: {coint_z:.2f}\n"
+    "====================\n\n"
+    "🔮 ΠΡΟΒΛΕΨΕΙΣ BITCOIN (BTC)\n"
+    "--------------------\n"
     f"📊 ARIMA: 1D {get_p(a_pb1)} | 7D {get_p(a_pb7)}\n"
     f"🤖 LSTM: 1D {get_p(l_pb1[0][0])} | 7D {get_p(l_pb7[0][0])}\n"
     f"🌳 XGB:  1D {get_p(xgb_b1.predict_proba(X_flat[-1:])[0][1])} | 7D {get_p(xgb_b7.predict_proba(X_flat[-1:])[0][1])}\n"
     f"💡 LGBM: 1D {get_p(lgb_b1.predict_proba(X_flat[-1:])[0][1])} | 7D {get_p(lgb_b7.predict_proba(X_flat[-1:])[0][1])}\n\n"
-    "🔮 *ΠΡΟΒΛΕΨΕΙΣ ETH - BTC*\n"
-    "-------------------\n"
+    "🔮 ΠΡΟΒΛΕΨΕΙΣ ETH - BTC\n"
+    "--------------------\n"
     f"📊 ARIMA: 1D {get_p(a_pe1)} | 7D {get_p(a_pe7)}\n"
     f"🤖 LSTM: 1D {get_p(l_pe1[0][0])} | 7D {get_p(l_pe7[0][0])}\n"
     f"🌳 XGB:  1D {get_p(xgb_e1.predict_proba(X_flat[-1:])[0][1])} | 7D {get_p(xgb_e7.predict_proba(X_flat[-1:])[0][1])}\n"
     f"💡 LGBM: 1D {get_p(lgb_e1.predict_proba(X_flat[-1:])[0][1])} | 7D {get_p(lgb_e7.predict_proba(X_flat[-1:])[0][1])}"
 )
 
-# Αποστολή στο Telegram
+# Αποστολή στο Telegram (χωρίς parse_mode)
 token = os.environ.get('TELEGRAM_BOT_TOKEN')
 chat_id = os.environ.get('TELEGRAM_CHAT_ID')
 url = f"https://api.telegram.org/bot{token}/sendMessage"
-requests.post(url, data={'chat_id': chat_id, 'text': message, 'parse_mode': 'Markdown'})
+requests.post(url, data={'chat_id': chat_id, 'text': message})
 print("✅ Το μήνυμα στάλθηκε!")
