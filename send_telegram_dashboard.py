@@ -103,7 +103,7 @@ def get_p(prob):
 message = (
     "📊 *ΠΡΩΙΝΟ AI DASHBOARD REPORT*\n"
     f"💰 *BTC:* ${df['BTC_Close'].iloc[-1]:,.2f}\n"
-    f"Ξ *ETH/BTC:* {df['ETHBTC_Close'].iloc[-1]:.5f}\n"
+    f"Ξ *ETH-BTC:* {df['ETHBTC_Close'].iloc[-1]:.5f}\n"
     f"🔗 *Coint Z:* {coint_z:.2f}\n"
     "━━━━━━━━━━━━━━━━━━━\n\n"
     "🔮 *ΠΡΟΒΛΕΨΕΙΣ BITCOIN (BTC)*\n"
@@ -112,7 +112,7 @@ message = (
     f"🤖 LSTM: 1D {get_p(l_pb1[0][0])} | 7D {get_p(l_pb7[0][0])}\n"
     f"🌳 XGB:  1D {get_p(xgb_b1.predict_proba(X_flat[-1:])[0][1])} | 7D {get_p(xgb_b7.predict_proba(X_flat[-1:])[0][1])}\n"
     f"💡 LGBM: 1D {get_p(lgb_b1.predict_proba(X_flat[-1:])[0][1])} | 7D {get_p(lgb_b7.predict_proba(X_flat[-1:])[0][1])}\n\n"
-    "🔮 *ΠΡΟΒΛΕΨΕΙΣ ETH / BTC*\n"
+    "🔮 *ΠΡΟΒΛΕΨΕΙΣ ETH - BTC*\n"
     "-------------------\n"
     f"📊 ARIMA: 1D {get_p(a_pe1)} | 7D {get_p(a_pe7)}\n"
     f"🤖 LSTM: 1D {get_p(l_pe1[0][0])} | 7D {get_p(l_pe7[0][0])}\n"
