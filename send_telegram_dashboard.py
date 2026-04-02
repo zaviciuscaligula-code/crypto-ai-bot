@@ -42,44 +42,50 @@ df['ETHBTC_Z'] = (df['ETHBTC_Close'] - df['ETHBTC_Close'].rolling(window=window_
 
 df['BTC_T1'] = (df['BTC_Z'].shift(-1) > df['BTC_Z']).astype(int)
 df['BTC_T7'] = (df['BTC_Z'].shift(-7) > df['BTC_Z']).astype(int)
-df['ETH_T1'] = (df['ETHBTC_Z'].shift(-1) > df['ETHBTC_Z']).astype(int)
-df['ETH_T7'] = (df['ETHBTC_Z'].shift(-7) > df['ETHBTC_Z']).astype(int)
 df = df.dropna()
 
 seq_length = 10
-X, Y_b1, Y_b7, Y_e1, Y_e7 = [], [], [], [], []
+X, Y_b1, Y_b7 = [], [], []
 btc_z, eth_z = df['BTC_Z'].values, df['ETHBTC_Z'].values
-y_btc1, y_btc7, y_eth1, y_eth7 = df['BTC_T1'].values, df['BTC_T7'].values, df['ETH_T1'].values, df['ETH_T7'].values
+y_btc1, y_btc7 = df['BTC_T1'].values, df['BTC_T7'].values
 
 for i in range(len(df) - seq_length):
     X.append(np.column_stack((btc_z[i : i + seq_length], eth_z[i : i + seq_length])))
     Y_b1.append(y_btc1[i + seq_length])
     Y_b7.append(y_btc7[i + seq_length])
-    Y_e1.append(y_eth1[i + seq_length])
-    Y_e7.append(y_eth7[i + seq_length])
 
-X, Y_b1, Y_b7, Y_e1, Y_e7 = map(np.array, [X, Y_b1, Y_b7, Y_e1, Y_e7])
+X, Y_b1, Y_b7 = map(np.array, [X, Y_b1, Y_b7])
 X_flat = X.reshape(X.shape[0], -1)
 
-# Training & Prediction on last day
+# Training LSTM
 inputs = Input(shape=(seq_length, 2))
 lstm1 = LSTM(32)(inputs)
 out_btc1 = Dense(1, activation='sigmoid')(lstm1)
-model_lstm = Model(inputs=inputs, outputs=out_btc1)
+out_btc7 = Dense(1, activation='sigmoid')(lstm1)
+model_lstm = Model(inputs=inputs, outputs=[out_btc1, out_btc7])
 model_lstm.compile(optimizer='adam', loss='binary_crossentropy')
-model_lstm.fit(X[:-1], Y_b1[:-1], epochs=10, batch_size=32, verbose=0)
-lstm_prob = model_lstm.predict(X[-1:])[0][0]
+model_lstm.fit(X[:-1], [Y_b1[:-1], Y_b7[:-1]], epochs=10, batch_size=32, verbose=0)
+lstm_p1, lstm_p7 = model_lstm.predict(X[-1:])
 
-xgb_m = xgb.XGBClassifier().fit(X_flat[:-1], Y_b1[:-1])
-xgb_prob = xgb_m.predict_proba(X_flat[-1:])[0][1]
+# Training XGBoost
+xgb_1 = xgb.XGBClassifier().fit(X_flat[:-1], Y_b1[:-1])
+xgb_7 = xgb.XGBClassifier().fit(X_flat[:-1], Y_b7[:-1])
+xgb_p1 = xgb_1.predict_proba(X_flat[-1:])[0][1]
+xgb_p7 = xgb_7.predict_proba(X_flat[-1:])[0][1]
 
-lgb_m = lgb.LGBMClassifier(verbose=-1).fit(X_flat[:-1], Y_b1[:-1])
-lgb_prob = lgb_m.predict_proba(X_flat[-1:])[0][1]
+# Training LightGBM
+lgb_1 = lgb.LGBMClassifier(verbose=-1).fit(X_flat[:-1], Y_b1[:-1])
+lgb_7 = lgb.LGBMClassifier(verbose=-1).fit(X_flat[:-1], Y_b7[:-1])
+lgb_p1 = lgb_1.predict_proba(X_flat[-1:])[0][1]
+lgb_p7 = lgb_7.predict_proba(X_flat[-1:])[0][1]
 
 # ARIMA
 m_b = ARIMA(df['BTC_Z'], order=(2, 1, 0)).fit()
 f_b1 = m_b.get_forecast(steps=1)
-arima_prob = 1 - norm.cdf(df['BTC_Z'].iloc[-1], loc=f_b1.predicted_mean.iloc[0], scale=f_b1.se_mean.iloc[0])
+f_b7 = m_b.get_forecast(steps=7)
+
+arima_p1 = 1 - norm.cdf(df['BTC_Z'].iloc[-1], loc=f_b1.predicted_mean.iloc[0], scale=f_b1.se_mean.iloc[0])
+arima_p7 = 1 - norm.cdf(df['BTC_Z'].iloc[-1], loc=f_b7.predicted_mean.iloc[-1], scale=f_b7.se_mean.iloc[-1])
 
 # Σύνθεση Μηνύματος
 def get_p(prob):
@@ -87,12 +93,18 @@ def get_p(prob):
 
 message = (
     "📊 *ΠΡΩΙΝΟ AI DASHBOARD REPORT*\n"
-    f"💰 *BTC:* ${df['BTC_Close'].iloc[-1]:,.2f} | *Coint Z:* {coint_z:.2f}\n\n"
-    "*ΠΡΟΒΛΕΨΕΙΣ ΓΙΑ ΑΥΡΙΟ*\n"
-    f"📊 ARIMA: {get_p(arima_prob)}\n"
-    f"🤖 LSTM: {get_p(lstm_prob)}\n"
-    f"🌳 XGBoost: {get_p(xgb_prob)}\n"
-    f"💡 LightGBM: {get_p(lgb_prob)}"
+    f"💰 *BTC:* ${df['BTC_Close'].iloc[-1]:,.2f} | *Coint Z:* {coint_z:.2f}\n"
+    "━━━━━━━━━━━━━━━━━━━\n\n"
+    "🔮 *ΠΡΟΒΛΕΨΕΙΣ ΓΙΑ ΑΥΡΙΟ (1D)*\n"
+    f"📊 ARIMA: {get_p(arima_p1)}\n"
+    f"🤖 LSTM: {get_p(lstm_p1[0][0])}\n"
+    f"🌳 XGBoost: {get_p(xgb_p1)}\n"
+    f"💡 LightGBM: {get_p(lgb_p1)}\n\n"
+    "🔮 *ΠΡΟΒΛΕΨΕΙΣ ΓΙΑ 7 ΜΕΡΕΣ (7D)*\n"
+    f"📊 ARIMA: {get_p(arima_p7)}\n"
+    f"🤖 LSTM: {get_p(lstm_p7[0][0])}\n"
+    f"🌳 XGBoost: {get_p(xgb_p7)}\n"
+    f"💡 LightGBM: {get_p(lgb_p7)}"
 )
 
 # Αποστολή στο Telegram
